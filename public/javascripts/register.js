@@ -10,7 +10,7 @@ var app = new Vue({
     },
     methods: {
         verifyPhone: function() {
-            AccountKit.login("PHONE", {countryCode: "+65", phoneNumber: "91234567"},
+            AccountKit.login("PHONE", {countryCode: "+84", phoneNumber: "1634067196"},
             this.accountKitCallback);
             this.messages.phoneButton = "Verifying...";
         },
@@ -20,11 +20,12 @@ var app = new Vue({
                 code = response.code;
                 csrf = response.state;
 
-                axios.post('/Replace/With/Actual/Endpoint', {
+                axios.post('/users/phone-token', {
                     code: code,
                     csrf_token : csrf
                 })
                 .then(function (response) {
+                    console.log(response);
                     vm.phoneVerified = true;
                     vm.messages.phoneStatus = "";
                     vm.messages.phoneButton = "Your number is verified";
