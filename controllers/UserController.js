@@ -1,11 +1,12 @@
 const express = require('express');
-const flash = require('express-flash');
 const router = express.Router();
 const fbacckit = require('../helpers/fbacckit');
 const Utils = require('../helpers/Utils');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const config = require('../config/env');
+const APIError = require('../helpers/APIError');
+const httpStatus = require('http-status');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -29,13 +30,15 @@ router.post('/api/auth/register', function(req, res, next){
     var user = new User(req.body);
     Utils.saltAndHash(user.password, function(err, result){
         if (err) {
-            return res.json(err);
+            const error = new APIError('Wrong password', httpStatus.UNAUTHORIZED, true);
+            return res.json(error);
         } else {
             user.password = result;
             user.phone = phoneDecoded;
             user.save(function(err, user){
                 if (err) {
-                    return res.json(err.errmsg);
+                    const error = new APIError(err.errmsg, httpStatus.UNAUTHORIZED, true);
+                    return res.json(error);
                 } else {
                     const token = jwt.sign({
                         userId: user._id,
@@ -70,19 +73,38 @@ router.post('/api/auth/login', function(req, res, next){
         ]
     }).exec(function(err, userId){
         if (err) {
-            return res.json(err);
+            const error = new APIError('Have system error', httpStatus.UNAUTHORIZED, true);
+            return res.json(error);
         } else {
             if (!userId) {
-                return res.json('Wrong email or username');
+                const error = new APIError('Wrong email or username', httpStatus.UNAUTHORIZED, true);
+                return res.json(error);
             } else {
                 Utils.checkPassword(user.password, userId.password, function(err, result){
                     if (err) {
                         return res.json(err);
                     } else {
                         if (!result) {
-                            return res.json('Wrong password');
+                            const error = new APIError('Password is not correct!', httpStatus.UNAUTHORIZED, true);
+                            return res.json(error);
                         } else {
-                            return res.json('Login success');
+                            const token = jwt.sign({
+                                userId: user._id,
+                                role: user.role,
+                                expiresIn: config.expireTime
+                            }, config.secret);
+                            return res.json({
+                                profile: {
+                                    id: user._id,
+                                    created: user.created,
+                                    username: user.username,
+                                    email: user.email,
+                                    e_verified: user.e_verified,
+                                    phone: user.phone,
+                                    role: user.role
+                                },
+                                id_token: token
+                            });
                         }
                     }
                 })
