@@ -17,8 +17,21 @@ var UserSchema = new mongoose.Schema({
     },
     phone_token: {
         unique: true,
-        type: String,
-        required: true
+        type: String
+    },
+    e_verified: {
+        required: true,
+        type: Boolean
+    },
+    created: {
+        required: true,
+        type: Date
     }
     
 });
+
+
+
+module.exports = UserSchema;
+
+module.exports = mongoose.model('User', UserSchema);
