@@ -3,11 +3,9 @@ const flash = require('express-flash');
 const router = express.Router();
 const fbacckit = require('../helpers/fbacckit');
 const Utils = require('../helpers/Utils');
-const jwt = require('json-web-token');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
-var phone;
-var secret = "secretttt";
+const config = require('../config/env');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -20,79 +18,47 @@ router.post('/phone-token', function(req, res, next){
             return res.json(error);
         }
         else{
-            jwt.encode(secret, result.phone, function(err, phone_token){
-                if (err) {
-                    return res.json(err);
-                } else {
-                    phone = phone_token;
-                    return res.json({phone_token: phone_token});
-                }
-            });
+            const phone_token = jwt.sign(result.phone, config.secret);
+            return res.json({phone_token: phone_token});
         }
     });
 });
 
 router.post('/api/auth/register', function(req, res, next){
+    const phoneDecoded = jwt.verify(req.body.phone_token, config.secret);
     var user = new User(req.body);
-    User.findOne({
-        $or: [
-            {'email': user.email},
-            {'username': user.username}
-        ]
-    }).exec(function(err, userId){
+    Utils.saltAndHash(user.password, function(err, result){
         if (err) {
             return res.json(err);
         } else {
-            if (userId) {
-                return res.json('User exists');
-            } else {
-                
-                jwt.decode(secret, phone, function (err, decodedPayload, decodedHeader) {
-                    if (err) {
-                        return res.json(err);
-                    } else {
-                        User.findOne({phone_token: decodedPayload}, function(err, userId){
-                            if (err) {
-                                return res.json(err);
-                            } else {
-                                if (userId) {
-                                    return res.json('Phone number already in use');
-                                } else {
-                                    Utils.saltAndHash(user.password, function(err, result){
-                                        if (err) {
-                                            return res.json(err);
-                                        } else {
-                                            user.password = result;
-                                        }
-                                    });
-                                    user.e_verified = false;
-                                    user.phone_token = decodedPayload;
-                                    var d = new Date();
-                                    user.created = d;
-                                    user.save(function(err, user){
-                                        if (err) {
-                                            return res.json(err);
-                                        } else {
-                                            return res.json({
-                                                profile: {
-                                                    id: user._id,
-                                                    created: user.created,
-                                                    username: user.username,
-                                                    password: user.password,
-                                                    email: user.email,
-                                                    e_verified: user.e_verified
-                                                }
-                                            });
-                                        }
-                                    });
-                                }
-                            }
-                        });
-                    }
-                });
-            }
+            user.password = result;
+            user.phone = phoneDecoded;
+            user.save(function(err, user){
+                if (err) {
+                    return res.json(err.errmsg);
+                } else {
+                    const token = jwt.sign({
+                        userId: user._id,
+                        role: user.role,
+                        expiresIn: config.expireTime
+                    }, config.secret);
+                    return res.json({
+                        profile: {
+                            id: user._id,
+                            created: user.created,
+                            username: user.username,
+                            email: user.email,
+                            e_verified: user.e_verified,
+                            phone: user.phone,
+                            role: user.role
+                        },
+                        id_token: token
+                    });
+                }
+            });
         }
-    });
+    });        
+    
 });
 
 router.post('/api/auth/login', function(req, res, next){
