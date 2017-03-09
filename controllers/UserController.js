@@ -8,6 +8,8 @@ const config = require('../config/env');
 const APIError = require('../helpers/APIError');
 const httpStatus = require('http-status');
 const expressjwt = require('express-jwt');
+const AuthApi = require('../middleware/AuthApi');
+const isAdmin = require('../middleware/isAdmin');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -114,20 +116,28 @@ router.post('/api/auth/login', function(req, res, next){
     });
 });
 
-router.post('/api/userList', expressjwt({secret: config.secret}), function(req, res, next){
-    var user = jwt.verify(req.body.id_token, config.secret);
-    console.log(user.role);
-    if (user.role === "parent") {
-        User.find({}, function(error, users){
-            if (error) {
-                return res.json(error);
-            } else {
-                return res.json({users: users});
-            }
-        });
-    } else {
-        return res.json("You're not admin");
-    }
+router.post('/api/userList', [AuthApi, isAdmin], function(req, res, next){
+//    const user = jwt.verify(req.headers.authorization, config.secret);
+//    console.log(user);
+//    console.log(req.headers);
+//    if (user.role === "parent") {
+//        User.find({}, function(error, users){
+//            if (error) {
+//                return res.json(error);
+//            } else {
+//                return res.json({users: users});
+//            }
+//        });
+//    } else {
+//        return res.json("You're not admin");
+//    }
+    User.find({}, function(err, users){
+        if (err) {
+            return res.json(err);
+        } else {
+            return res.json({users: users});
+        }
+    });
     
     
 });
