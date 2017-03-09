@@ -7,6 +7,7 @@ const User = require('../models/User');
 const config = require('../config/env');
 const APIError = require('../helpers/APIError');
 const httpStatus = require('http-status');
+const expressjwt = require('express-jwt');
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -37,7 +38,8 @@ router.post('/api/auth/register', function(req, res, next){
             user.phone = phoneDecoded;
             user.save(function(err, user){
                 if (err) {
-                    const error = new APIError(err.errmsg, httpStatus.UNAUTHORIZED, true);
+                    console.log(err);
+                    const error = new APIError(err.message, httpStatus.UNAUTHORIZED, true);
                     return res.json(error);
                 } else {
                     const token = jwt.sign({
@@ -65,22 +67,21 @@ router.post('/api/auth/register', function(req, res, next){
 });
 
 router.post('/api/auth/login', function(req, res, next){
-    var user = new User(req.body);
     User.findOne({
         $or: [
-            {'email': user.email},
-            {'username': user.username}
+            {'email': req.body.email},
+            {'username': req.body.username}
         ]
-    }).exec(function(err, userId){
+    }).exec(function(err, user){
         if (err) {
             const error = new APIError('Have system error', httpStatus.UNAUTHORIZED, true);
             return res.json(error);
         } else {
-            if (!userId) {
+            if (!user) {
                 const error = new APIError('Wrong email or username', httpStatus.UNAUTHORIZED, true);
                 return res.json(error);
             } else {
-                Utils.checkPassword(user.password, userId.password, function(err, result){
+                Utils.checkPassword(req.body.password, user.password, function(err, result){
                     if (err) {
                         return res.json(err);
                     } else {
@@ -107,10 +108,28 @@ router.post('/api/auth/login', function(req, res, next){
                             });
                         }
                     }
-                })
+                });
             }
         }
-    })
-})
+    });
+});
+
+router.post('/api/userList', expressjwt({secret: config.secret}), function(req, res, next){
+    var user = jwt.verify(req.body.id_token, config.secret);
+    console.log(user.role);
+    if (user.role === "parent") {
+        User.find({}, function(error, users){
+            if (error) {
+                return res.json(error);
+            } else {
+                return res.json({users: users});
+            }
+        });
+    } else {
+        return res.json("You're not admin");
+    }
+    
+    
+});
 
 module.exports = router;

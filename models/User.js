@@ -28,11 +28,11 @@ var UserSchema = new mongoose.Schema({
     },
     e_verified: {
         type: Boolean,
-        default: false,
+//        default: false,
     },
     role: {
         type: String,
-        default: 'parent'
+//        default: 'parent'
     },
     created: {
         required: true,
