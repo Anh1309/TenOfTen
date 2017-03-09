@@ -34,7 +34,7 @@ module.exports = function(req, res, next) {
         req.token = token; // This is the decrypted token or the payload you provided
         // Find the user with that token
         
-        User.findOne({ id: token.id })
+        User.findOne({ _id: token.userId })
             .exec(function(err, user) {
                 if (err) { return res.json(400, "Have error"); }
                 if (!user) { return res.json(404, "Not found user"); }

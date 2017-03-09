@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Utils = require('../helpers/Utils');
+var uniqueValidator = require('mongoose-unique-validator');
 
 var UserSchema = new mongoose.Schema({
     _id: {
@@ -28,11 +29,11 @@ var UserSchema = new mongoose.Schema({
     },
     e_verified: {
         type: Boolean,
-//        default: false,
+        default: false,
     },
     role: {
         type: String,
-//        default: 'parent'
+        default: 'parent'
     },
     created: {
         required: true,
@@ -43,6 +44,5 @@ var UserSchema = new mongoose.Schema({
     
 });
 
-module.exports = UserSchema;
-
+UserSchema.plugin(uniqueValidator);
 module.exports = mongoose.model('User', UserSchema);

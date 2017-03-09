@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt-nodejs");
 const uuidV4 = require('uuid/v4');
+const async = require('async');
 
 // generate a UUID V4 string base64 encoded and url safe
 function getUUID() {
@@ -30,8 +31,30 @@ function checkPassword(guess, hashedPassword, done) {
     });
 }
 
+function getStringErrors(errors, done) {
+    async.waterfall([
+        function (callback) {
+            var messages = [];
+            for (var key in errors) {
+                messages.push(errors[key].message);
+            }
+            
+            callback(null, messages);
+        }, function (messages, callback) {
+            var message = messages.join("\n");
+    
+            callback(null, message);
+        }
+    ], function (err, result) {
+        if (err)
+            return done(err);
+        else
+            return done(null, result);
+    });
+}
 module.exports = {
     getUUID: getUUID,
     saltAndHash: saltAndHash,
-    checkPassword: checkPassword
+    checkPassword: checkPassword,
+    getStringErrors: getStringErrors
 };
